@@ -1,0 +1,98 @@
+{
+    "_about": "Square Golf recipe. Starts the Square Golf Launcher, presses UPDATE when an update is offered (otherwise PLAY), signs in with the account Square remembers, skips the device search, and adds a Driving Range shortcut. Square Golf installs per Windows account under %LOCALAPPDATA%. Tested with Square Golf app 2.0.5.",
+
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "whenReady": "minimize",
+
+    "beforeEachSim": [
+        {
+            "_note": "Square runs as two programs: the launcher window and the game itself.",
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["Square Golf Launcher", "Square Golf", "obs64"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ],
+        "squareBoot": [
+            { "type": "include", "set": "obs" },
+            {
+                "type": "start", "label": "Starting Square",
+                "path": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe"
+            },
+            {
+                "_note": "The launcher is an Electron app, so its buttons are pressed through UI Automation. UPDATE is pressed whenever it's enabled; then the step keeps waiting for PLAY (up to 15 minutes for a big download).",
+                "type": "clickButton", "label": "Updating if needed, then pressing Play",
+                "process": "Square Golf Launcher", "clickFirst": "UPDATE", "text": "PLAY", "timeout": 900
+            },
+            {
+                "_note": "The game is a Unity app, so this is OCR. It only presses Sign in; it relies on Square's 'Remember me' and never types credentials. confirmGone re-clicks while the button is still there, because the screen shows it before it accepts input.",
+                "type": "clickText", "label": "Signing in",
+                "process": "Square Golf", "text": "Sign in", "timeout": 180, "settle": 1.5, "confirmGone": true
+            },
+            {
+                "_note": "Remove this step if you want Square to connect to the launch monitor over Bluetooth on its own.",
+                "type": "clickText", "label": "Skipping device search",
+                "process": "Square Golf", "text": "Skip", "timeout": 60, "settle": 1, "confirmGone": true, "parkMouse": true
+            }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "square",
+            "name": "Square",
+            "subtitle": "Square Golf",
+            "accent": "#E8833A",
+            "image": "square-logo.png",
+            "check": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe",
+            "steps": [
+                { "type": "include", "set": "squareBoot" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "D",
+                    "steps": [
+                        { "type": "include", "set": "squareBoot" },
+                        {
+                            "_note": "The label under the tile on the home screen is clickable. No confirmGone here: the next screen's heading also says Driving Ranges.",
+                            "type": "clickText", "label": "Opening Driving Ranges",
+                            "process": "Square Golf", "text": "Driving Ranges", "timeout": 60, "settle": 1.5
+                        },
+                        {
+                            "_note": "Starts whichever range and camera were used last.",
+                            "type": "clickText", "label": "Loading the driving range",
+                            "process": "Square Golf", "text": "Play", "timeout": 30, "settle": 1, "confirmGone": true, "parkMouse": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["Square Golf Launcher", "Square Golf", "obs64"]
+        }
+    ]
+}

@@ -1,0 +1,114 @@
+{
+    "_about": "square_impact add-on (https://github.com/moexx399/square_impact). square_impact shows instant high-speed impact replays from the Square Omni launch monitor's own cameras, as an OBS browser-source overlay. This recipe updates it, starts its overlay server before the simulator, and waits for the overlay to answer - shown here with GSPro and Square Golf, both of which can use the Omni. Download square_impact.exe from the releases page and set its path below (the default expects it in a square_impact folder in your user profile).",
+
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "whenReady": "minimize",
+
+    "beforeEachSim": [
+        {
+            "_note": "square_impact runs as several processes (a starter, the main program and worker processes); the kill step closes the whole tree and checks none are left.",
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["square_impact", "GSPro", "GSPLauncher", "GSPconnect", "Square Golf Launcher", "Square Golf", "obs64"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "_note": "In OBS, add a Browser Source with URL http://localhost:8765/ sized 1280x384 or 640x192 (1280x192 with --crop full). Each shot pops up, plays twice and disappears.",
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ],
+        "squareImpact": [
+            {
+                "_note": "Replaces the exe with the latest GitHub release when there's a newer one (add --force to reinstall anyway). Minimized, and optional so being offline doesn't stop the boot.",
+                "type": "start", "label": "Checking square_impact for updates",
+                "path": "%USERPROFILE%\\square_impact\\square_impact.exe",
+                "args": "update", "wait": true, "timeout": 60, "minimized": true, "optional": true
+            },
+            {
+                "_note": "obs = run the overlay server. Options: --port (default 8765), --crop ball|full|left|right, --trim-front / --trim-back 0-1, --no-denoise. --no-update-check because the step above already did. conhost opens it in the classic console so the taskbar shows square_impact's own icon instead of Windows Terminal's.",
+                "type": "start", "label": "Starting square_impact",
+                "path": "%USERPROFILE%\\square_impact\\square_impact.exe",
+                "args": "obs --port 8765 --crop ball --no-update-check",
+                "conhost": true
+            },
+            {
+                "_note": "The overlay server answers straight away, even before the Omni is plugged in; it then waits for the launch monitor's USB ports by itself.",
+                "type": "waitPort", "label": "Waiting for the impact overlay", "port": 8765, "timeout": 20, "optional": true
+            }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "gspro",
+            "name": "GSPro",
+            "subtitle": "With square_impact replays",
+            "accent": "#3FA66B",
+            "image": "gspro.png",
+            "check": "C:\\GSProV1\\GSPLauncher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "include", "set": "squareImpact" },
+                { "type": "start", "label": "Starting GSPro", "path": "C:\\GSProV1\\GSPLauncher.exe" },
+                {
+                    "type": "clickButton", "label": "Opening Square visual data",
+                    "process": "GSPconnect", "text": "Open Visual Data", "timeout": 180, "optional": true
+                },
+                {
+                    "type": "focus", "label": "Bringing GSPro to the front",
+                    "process": "GSPro", "settle": 1.5, "timeout": 30, "optional": true
+                }
+            ]
+        },
+        {
+            "id": "square",
+            "name": "Square",
+            "subtitle": "With square_impact replays",
+            "accent": "#E8833A",
+            "image": "square-logo.png",
+            "check": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "include", "set": "squareImpact" },
+                {
+                    "type": "start", "label": "Starting Square",
+                    "path": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe"
+                },
+                {
+                    "type": "clickButton", "label": "Updating if needed, then pressing Play",
+                    "process": "Square Golf Launcher", "clickFirst": "UPDATE", "text": "PLAY", "timeout": 900
+                },
+                {
+                    "type": "clickText", "label": "Signing in",
+                    "process": "Square Golf", "text": "Sign in", "timeout": 180, "settle": 1.5, "confirmGone": true
+                },
+                {
+                    "type": "clickText", "label": "Skipping device search",
+                    "process": "Square Golf", "text": "Skip", "timeout": 60, "settle": 1, "confirmGone": true, "parkMouse": true
+                }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["square_impact", "GSPro", "GSPLauncher", "GSPconnect", "Square Golf Launcher", "Square Golf", "obs64"]
+        }
+    ]
+}

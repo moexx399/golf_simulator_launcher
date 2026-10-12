@@ -1,0 +1,106 @@
+{
+    "_about": "GSPro recipe. Boots GSPro through its launcher, opens the Square connector's Visual Data window if GSPconnect is in use, and adds a Driving Range shortcut that clicks through to the practice range. Tested with GSPro installed in the default C:\\GSProV1 folder.",
+
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "whenReady": "minimize",
+
+    "beforeEachSim": [
+        {
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "_note": "OBS shows a Safe Mode prompt after it was force-closed; deleting its crash markers prevents that, and the click below handles it if it appears anyway.",
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "_note": "Add --collection \"Your Scenes\" and/or --profile \"Your Profile\" to pick what OBS opens with.",
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            {
+                "_note": "4455 is OBS's WebSocket server (Tools > WebSocket Server Settings). If it's turned off this just times out and the boot carries on.",
+                "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true
+            }
+        ],
+        "gsproAfterLaunch": [
+            {
+                "_note": "Only for Square launch monitors connected through GSPconnect; harmlessly skipped otherwise.",
+                "type": "clickButton", "label": "Opening Square visual data",
+                "process": "GSPconnect", "text": "Open Visual Data", "timeout": 180, "optional": true
+            },
+            {
+                "type": "focus", "label": "Bringing GSPro to the front",
+                "process": "GSPro", "settle": 1.5, "timeout": 30, "optional": true
+            }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "gspro",
+            "name": "GSPro",
+            "subtitle": "Courses, practice range and online play",
+            "accent": "#3FA66B",
+            "image": "gspro.png",
+            "check": "C:\\GSProV1\\GSPLauncher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "start", "label": "Starting GSPro", "path": "C:\\GSProV1\\GSPLauncher.exe" },
+                { "type": "include", "set": "gsproAfterLaunch" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "R",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "start", "label": "Starting GSPro launcher", "path": "C:\\GSProV1\\GSPLauncher.exe" },
+                        {
+                            "_note": "GSPLauncher starts GSPro by itself when there's no update, so this is skipped as soon as GSPro is running.",
+                            "type": "clickButton", "label": "Checking for updates, then launching GSPro",
+                            "process": "GSPLauncher", "text": "Launch GSPro", "doneIfProcess": "GSPro", "timeout": 600
+                        },
+                        {
+                            "_note": "Only when GSPro was started with its screen selector; skipped once the game window (UnityWndClass) is up.",
+                            "type": "clickButton", "label": "Confirming screen settings",
+                            "process": "GSPro", "text": "Play!", "ifCommandLine": "*-show-screen-selector*", "doneIfWindowClass": "UnityWndClass",
+                            "timeout": 60, "optional": true
+                        },
+                        {
+                            "_note": "GSPro is a Unity game, so its menu is read with OCR.",
+                            "type": "clickText", "label": "Opening Practice",
+                            "process": "GSPro", "text": "Practice", "timeout": 180
+                        },
+                        {
+                            "_note": "The practice screen's heading also says PRACTICE RANGE, so match the tile's own caption.",
+                            "type": "clickText", "label": "Loading the driving range",
+                            "process": "GSPro", "text": "GSPro Practice", "timeout": 30, "parkMouse": true
+                        },
+                        { "type": "include", "set": "gsproAfterLaunch" }
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64"]
+        }
+    ]
+}

@@ -27,6 +27,8 @@ The sample `launcher.example.json` is a working setup for:
 | **Square Golf** | OBS → Square launcher → *Update* if available, otherwise *Play* → *Sign in* → *Skip* device search | **Driving Range (D)** — clicks *Driving Ranges*, then *Play* |
 | **PurePlay** | Placeholder (disabled) | — |
 
+More recipes — one per simulator, plus [square_impact](https://github.com/moexx399/square_impact) impact replays for the Square Omni — are in the [`examples`](examples/) folder. Each is a complete config you can try with `-Config examples\<name>.json`.
+
 ## Requirements
 
 - Windows 10 or 11
@@ -199,6 +201,7 @@ Contributions are welcome — especially recipes for more simulators and launch 
 launcher.ps1            the app (UI, step runner, automation helpers)
 launcher.example.json   sample config with the GSPro / Square / PurePlay recipes
 launcher.json           your own config (git-ignored; created from the example on first run)
+examples/               one complete recipe per simulator / add-on
 install.ps1             adds/removes the Startup and Desktop shortcuts
 *.png                   tile logos
 docs/                   README images

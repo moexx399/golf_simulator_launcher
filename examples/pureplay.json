@@ -1,0 +1,63 @@
+{
+    "_about": "PurePlay starter recipe - NOT TESTED YET. It starts PurePlay and OBS but doesn't click through any screens. Set the two paths to your PurePlay install (and the process name in the kill lists to its .exe name without .exe), remove 'enabled': false, then add clickButton / clickText steps for its menus. Contributions welcome.",
+
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "whenReady": "minimize",
+
+    "beforeEachSim": [
+        {
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["PurePlay", "obs64"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "pureplay",
+            "name": "PurePlay",
+            "subtitle": "PurePlay Golf",
+            "accent": "#BEFF00",
+            "image": "pureplay-logo.png",
+            "enabled": false,
+            "status": "Set the PurePlay path in examples\\pureplay.json",
+            "check": "C:\\CHANGE_ME\\PurePlay.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "start", "label": "Starting PurePlay", "path": "C:\\CHANGE_ME\\PurePlay.exe" },
+                {
+                    "_note": "Example of a follow-up click once you know PurePlay's screens; optional so it can't stop the boot while you're working it out.",
+                    "type": "focus", "label": "Bringing PurePlay to the front",
+                    "process": "PurePlay", "settle": 2, "timeout": 60, "optional": true
+                }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["PurePlay", "obs64"]
+        }
+    ]
+}
