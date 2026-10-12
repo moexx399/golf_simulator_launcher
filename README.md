@@ -13,7 +13,7 @@ Everything is driven by a single JSON file, so adding a new simulator or changin
 - **Clean switching** — closes leftover sim apps (gracefully first, then whole process trees) before every boot, and asks for admin rights once if something was started elevated.
 - **Live progress** — every step is shown with a ✓ / – / ✕ as it runs; failures say what went wrong and let you go back to the menu.
 - **Stays out of the way** — minimizes to the taskbar when the sim is ready; launching it again brings the existing window back instead of opening a second copy.
-- **Starts at login** — one install script adds it to Startup and the Desktop.
+- **Starts at login, quickly** — one install script adds it to Startup and the Desktop. When it runs from Startup it turns off Windows' startup-app delay for that account (from the next sign-in; `install.ps1 -Uninstall` restores it), and its native helper is compiled once and cached in `%LOCALAPPDATA%\GolfSimLauncher`.
 - **Keyboard support** — `1`–`9` pick a simulator, letter keys trigger shortcut buttons, `Esc` exits.
 - **No dependencies** — plain PowerShell 5.1 + WPF, which ship with Windows 10 and 11.
 

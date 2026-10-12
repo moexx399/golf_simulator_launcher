@@ -53,8 +53,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 
 # Window and mouse helpers for the click-through steps. DPI awareness keeps
 # window positions in real pixels on the 4K screen.
-if (-not ('GolfNative' -as [type])) {
-    Add-Type -TypeDefinition @'
+$nativeSource = @'
 using System;
 using System.Runtime.InteropServices;
 public static class GolfNative {
@@ -89,6 +88,23 @@ public static class GolfNative {
     }
 }
 '@
+# Compiling C# starts the compiler, which is slow right after sign-in, so the
+# helper is built once into a DLL (named after a hash of the code) and reused.
+if (-not ('GolfNative' -as [type])) {
+    try {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        $hash = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($nativeSource))[0..5] | ForEach-Object { $_.ToString('x2') })
+        $cacheDir = Join-Path $env:LOCALAPPDATA 'GolfSimLauncher'
+        $dll = Join-Path $cacheDir "GolfNative-$hash.dll"
+        if (-not (Test-Path $dll)) {
+            New-Item -ItemType Directory -Force $cacheDir | Out-Null
+            Get-ChildItem $cacheDir -Filter 'GolfNative-*.dll' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+            Add-Type -TypeDefinition $nativeSource -OutputAssembly $dll -OutputType Library
+        }
+        if (-not ('GolfNative' -as [type])) { Add-Type -Path $dll }
+    } catch {
+        if (-not ('GolfNative' -as [type])) { Add-Type -TypeDefinition $nativeSource }
+    }
 }
 [void][GolfNative]::SetProcessDPIAware()
 
@@ -169,6 +185,22 @@ function Test-Port([int]$Port) {
 }
 
 # --- config ------------------------------------------------------------------
+
+# When the launcher starts at sign-in, Windows holds Startup apps back for a
+# while; turn that delay off for this account (takes effect next sign-in).
+# install.ps1 -Uninstall puts it back.
+if (Test-Path (Join-Path ([Environment]::GetFolderPath('Startup')) 'Golf Simulator.lnk')) {
+    try {
+        $serialize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize'
+        $current = Get-ItemProperty $serialize -ErrorAction SilentlyContinue
+        if (-not $current -or $current.StartupDelayInMSec -ne 0 -or $current.WaitForIdleState -ne 0) {
+            if (-not (Test-Path $serialize)) { New-Item $serialize | Out-Null }
+            New-ItemProperty $serialize -Name StartupDelayInMSec -Value 0 -PropertyType DWord -Force | Out-Null
+            New-ItemProperty $serialize -Name WaitForIdleState -Value 0 -PropertyType DWord -Force | Out-Null
+            Write-Log 'Turned off the Windows startup-app delay for this account'
+        }
+    } catch { }
+}
 
 # First run from a fresh copy of the repo: start from the example config.
 $example = Join-Path $PSScriptRoot 'launcher.example.json'
@@ -1091,7 +1123,8 @@ $window.Add_ContentRendered({
 # --- go ----------------------------------------------------------------------
 
 try {
-    Write-Log "Launcher opened$(if ($DryRun) { ' (dry run)' })"
+    $startup = ((Get-Date) - (Get-Process -Id $PID).StartTime).TotalSeconds
+    Write-Log ("Launcher opened in {0:N1} s{1}" -f $startup, $(if ($DryRun) { ' (dry run)' }))
     [void]$window.ShowDialog()
 } catch {
     Show-Fatal "The launcher hit an error.`n`n$($_.Exception.Message)"

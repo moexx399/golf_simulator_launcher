@@ -40,6 +40,15 @@ foreach ($folder in $startup, $desktop) {
     Write-Host "Created $path"
 }
 
+# The launcher turns off Windows' startup-app delay for its account; put it back.
+if ($Uninstall -and -not $User) {
+    $serialize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize'
+    foreach ($name in 'StartupDelayInMSec', 'WaitForIdleState') {
+        Remove-ItemProperty $serialize -Name $name -ErrorAction SilentlyContinue
+    }
+    Write-Host 'Restored the Windows startup-app delay'
+}
+
 # The old batch file would boot GSPro behind the menu if it is still set to run at login.
 $old =Get-ChildItem $startup -Filter '*golf*' -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'Golf Simulator.lnk' }
 if ($old -and -not $Uninstall) {
