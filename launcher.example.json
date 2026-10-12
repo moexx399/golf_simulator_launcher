@@ -1,0 +1,157 @@
+{
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "icon": "",
+    "fullscreen": true,
+    "whenReady": "minimize",
+    "autoBootSeconds": 0,
+    "defaultSim": "gspro",
+
+    "beforeEachSim": [
+        {
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "PurePlay"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ],
+        "gsproVisualData": [
+            {
+                "type": "clickButton", "label": "Opening Square visual data",
+                "process": "GSPconnect", "text": "Open Visual Data", "timeout": 180, "optional": true
+            },
+            {
+                "type": "focus", "label": "Bringing GSPro to the front",
+                "process": "GSPro", "settle": 1.5, "timeout": 30, "optional": true
+            }
+        ],
+        "squareBoot": [
+            { "type": "include", "set": "obs" },
+            { "type": "start", "label": "Starting Square", "path": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe" },
+            {
+                "type": "clickButton", "label": "Updating if needed, then pressing Play",
+                "process": "Square Golf Launcher", "clickFirst": "UPDATE", "text": "PLAY", "timeout": 900
+            },
+            {
+                "type": "clickText", "label": "Signing in",
+                "process": "Square Golf", "text": "Sign in", "timeout": 180, "settle": 1.5, "confirmGone": true
+            },
+            {
+                "type": "clickText", "label": "Skipping device search",
+                "process": "Square Golf", "text": "Skip", "timeout": 60, "settle": 1, "confirmGone": true, "parkMouse": true
+            }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "gspro",
+            "name": "GSPro",
+            "subtitle": "Courses, practice range and online play",
+            "accent": "#3FA66B",
+            "image": "gspro.png",
+            "check": "C:\\GSProV1\\GSPLauncher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "start", "label": "Starting GSPro", "path": "C:\\GSProV1\\GSPLauncher.exe" },
+                { "type": "include", "set": "gsproVisualData" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "R",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "start", "label": "Starting GSPro launcher", "path": "C:\\GSProV1\\GSPLauncher.exe" },
+                        {
+                            "type": "clickButton", "label": "Checking for updates, then launching GSPro",
+                            "process": "GSPLauncher", "text": "Launch GSPro", "doneIfProcess": "GSPro", "timeout": 600
+                        },
+                        {
+                            "type": "clickButton", "label": "Confirming screen settings",
+                            "process": "GSPro", "text": "Play!", "ifCommandLine": "*-show-screen-selector*", "doneIfWindowClass": "UnityWndClass",
+                            "timeout": 60, "optional": true
+                        },
+                        {
+                            "type": "clickText", "label": "Opening Practice",
+                            "process": "GSPro", "text": "Practice", "timeout": 180
+                        },
+                        {
+                            "type": "clickText", "label": "Loading the driving range",
+                            "process": "GSPro", "text": "GSPro Practice", "timeout": 30, "parkMouse": true
+                        },
+                        { "type": "include", "set": "gsproVisualData" }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "square",
+            "name": "Square",
+            "subtitle": "Square Golf",
+            "accent": "#E8833A",
+            "image": "square-logo.png",
+            "check": "%LOCALAPPDATA%\\Programs\\Square Golf Launcher\\Square Golf Launcher.exe",
+            "steps": [
+                { "type": "include", "set": "squareBoot" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "D",
+                    "steps": [
+                        { "type": "include", "set": "squareBoot" },
+                        {
+                            "type": "clickText", "label": "Opening Driving Ranges",
+                            "process": "Square Golf", "text": "Driving Ranges", "timeout": 60, "settle": 1.5
+                        },
+                        {
+                            "type": "clickText", "label": "Loading the driving range",
+                            "process": "Square Golf", "text": "Play", "timeout": 30, "settle": 1, "confirmGone": true, "parkMouse": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "pureplay",
+            "name": "PurePlay",
+            "subtitle": "PurePlay Golf",
+            "accent": "#4A8FE7",
+            "image": "pureplay-logo.png",
+            "enabled": false,
+            "status": "Coming soon",
+            "check": "C:\\CHANGE_ME\\PurePlay.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "start", "label": "Starting PurePlay", "path": "C:\\CHANGE_ME\\PurePlay.exe" }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "PurePlay"]
+        }
+    ]
+}

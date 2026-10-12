@@ -1,0 +1,5 @@
+# Your own setup - copy launcher.example.json to start one
+launcher.json
+
+launcher.log
+*.bak
