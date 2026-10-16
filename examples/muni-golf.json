@@ -1,0 +1,103 @@
+{
+    "_about": "Muni Golf recipe. Starts the Muni Golf Launcher, presses Update when one is offered (otherwise Play), waits for the game and brings it to the front, and adds a Driving Range shortcut (Practice > Facilities > Muni Driving Range). Muni Golf installs per Windows account under %LOCALAPPDATA%. Tested with Muni Golf Launcher 2026.10.6 / game 2026.10.3.",
+
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "whenReady": "minimize",
+
+    "beforeEachSim": [
+        {
+            "_note": "Muni runs as the launcher, a small starter (MuniGolf), the Unreal game (MuniGolf-Win64-Shipping) and its launch monitor bridge (LaunchMonitorConnect).",
+            "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
+            "names": ["MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "obs64"]
+        }
+    ],
+
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles", "label": "Clearing OBS crash flag",
+                "path": "%APPDATA%\\obs-studio\\.sentinel\\run_*"
+            },
+            {
+                "type": "start", "label": "Starting OBS",
+                "path": "%ProgramFiles%\\obs-studio\\bin\\64bit\\obs64.exe",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Making sure OBS opens normally",
+                "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
+            },
+            { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ],
+        "muniBoot": [
+            {
+                "type": "start", "label": "Starting Muni Golf",
+                "path": "%LOCALAPPDATA%\\Programs\\muni-golf-launcher\\MuniGolfLauncher.exe"
+            },
+            {
+                "_note": "The launcher is an Electron app, so its buttons are pressed through UI Automation. Its nav bar also has a 'Play' link; clickButton prefers the real Play button. settle gives the update check a few seconds to light up Update before Play is pressed.",
+                "type": "clickButton", "label": "Updating if needed, then pressing Play",
+                "process": "MuniGolfLauncher", "clickFirst": "Update", "text": "Play", "settle": 4,
+                "doneIfProcess": "MuniGolf-Win64-Shipping", "timeout": 900
+            },
+            { "type": "waitProcess", "label": "Waiting for the game", "name": "MuniGolf-Win64-Shipping", "timeout": 180 },
+            {
+                "type": "focus", "label": "Bringing Muni Golf to the front",
+                "process": "MuniGolf-Win64-Shipping", "settle": 3, "timeout": 60, "optional": true
+            }
+        ],
+        "muniRange": [
+            {
+                "_note": "The game is an Unreal app, so its menu is read with OCR.",
+                "type": "clickText", "label": "Opening Practice",
+                "process": "MuniGolf-Win64-Shipping", "text": "Practice", "timeout": 180, "settle": 1.5
+            },
+            {
+                "_note": "No confirmGone on this or the next step: the following screens also show the same words (PRACTICE FACILITIES heading, the range's minimap title).",
+                "type": "clickText", "label": "Opening Facilities",
+                "process": "MuniGolf-Win64-Shipping", "text": "Facilities", "timeout": 30, "settle": 1
+            },
+            {
+                "_note": "The built-in range. Swap in another installed facility's name to practise somewhere else.",
+                "type": "clickText", "label": "Loading the driving range",
+                "process": "MuniGolf-Win64-Shipping", "text": "Muni Driving Range", "timeout": 60, "settle": 1, "parkMouse": true
+            }
+        ]
+    },
+
+    "sims": [
+        {
+            "id": "muni",
+            "name": "Muni Golf",
+            "subtitle": "Real courses built from map data",
+            "accent": "#2F9E6B",
+            "image": "muni-logo.png",
+            "check": "%LOCALAPPDATA%\\Programs\\muni-golf-launcher\\MuniGolfLauncher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "include", "set": "muniBoot" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "M",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "include", "set": "muniBoot" },
+                        { "type": "include", "set": "muniRange" }
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "closeAll": [
+        {
+            "type": "kill", "graceful": true, "timeout": 15,
+            "names": ["MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "obs64"]
+        }
+    ]
+}

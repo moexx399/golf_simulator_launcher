@@ -10,7 +10,7 @@
     "beforeEachSim": [
         {
             "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
-            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "PurePlay"]
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "PurePlay"]
         }
     ],
 
@@ -40,6 +40,36 @@
             {
                 "type": "focus", "label": "Bringing GSPro to the front",
                 "process": "GSPro", "settle": 1.5, "timeout": 30, "optional": true
+            }
+        ],
+        "muniBoot": [
+            { "type": "start", "label": "Starting Muni Golf", "path": "%LOCALAPPDATA%\\Programs\\muni-golf-launcher\\MuniGolfLauncher.exe" },
+            {
+                "type": "clickButton", "label": "Updating if needed, then pressing Play",
+                "process": "MuniGolfLauncher", "clickFirst": "Update", "text": "Play", "settle": 4,
+                "doneIfProcess": "MuniGolf-Win64-Shipping", "timeout": 900
+            },
+            { "type": "waitProcess", "label": "Waiting for the game", "name": "MuniGolf-Win64-Shipping", "timeout": 180 },
+            {
+                "type": "focus", "label": "Bringing Muni Golf to the front",
+                "process": "MuniGolf-Win64-Shipping", "settle": 3, "timeout": 60, "optional": true
+            }
+        ],
+        "muniRange": [
+            {
+                "_note": "The game is an Unreal app, so its menu is read with OCR.",
+                "type": "clickText", "label": "Opening Practice",
+                "process": "MuniGolf-Win64-Shipping", "text": "Practice", "timeout": 180, "settle": 1.5
+            },
+            {
+                "_note": "No confirmGone on this or the next step: the following screens also show the same words (PRACTICE FACILITIES heading, the range's minimap title).",
+                "type": "clickText", "label": "Opening Facilities",
+                "process": "MuniGolf-Win64-Shipping", "text": "Facilities", "timeout": 30, "settle": 1
+            },
+            {
+                "_note": "The built-in range. Swap in another installed facility's name to practise somewhere else.",
+                "type": "clickText", "label": "Loading the driving range",
+                "process": "MuniGolf-Win64-Shipping", "text": "Muni Driving Range", "timeout": 60, "settle": 1, "parkMouse": true
             }
         ],
         "squareBoot": [
@@ -133,6 +163,30 @@
             ]
         },
         {
+            "id": "muni",
+            "name": "Muni Golf",
+            "subtitle": "Real courses built from map data",
+            "accent": "#2F9E6B",
+            "image": "muni-logo.png",
+            "check": "%LOCALAPPDATA%\\Programs\\muni-golf-launcher\\MuniGolfLauncher.exe",
+            "steps": [
+                { "type": "include", "set": "obs" },
+                { "type": "include", "set": "muniBoot" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "M",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "include", "set": "muniBoot" },
+                        { "type": "include", "set": "muniRange" }
+                    ]
+                }
+            ]
+        },
+        {
             "id": "pureplay",
             "name": "PurePlay",
             "subtitle": "PurePlay Golf",
@@ -151,7 +205,7 @@
     "closeAll": [
         {
             "type": "kill", "graceful": true, "timeout": 15,
-            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "PurePlay"]
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "PurePlay"]
         }
     ]
 }

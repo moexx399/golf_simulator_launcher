@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Golf simulator launcher: a full-screen menu for choosing which simulator to boot.
@@ -242,8 +242,16 @@ function Get-SimState($Sim) {
 
 # --- click-through automation ------------------------------------------------
 
+# Only this sign-in's processes: with fast user switching, another account's
+# copy of the same app must not be closed (or waited on, or clicked).
+$script:sessionId = (Get-Process -Id $PID).SessionId
+function Get-SessionProcess {
+    [CmdletBinding()] param([string]$Name)
+    Get-Process -Name $Name -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $script:sessionId }
+}
+
 function Get-AppWindow([string]$ProcessName) {
-    foreach ($p in Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+    foreach ($p in Get-SessionProcess -Name $ProcessName -ErrorAction SilentlyContinue) {
         $h = $p.MainWindowHandle
         if ($h -ne [IntPtr]::Zero -and -not [GolfNative]::IsIconic($h)) { return $h }
     }
@@ -268,10 +276,17 @@ function Restore-Launcher {
 function Find-UiaButton([string]$ProcessName, [string]$Name) {
     $ae = [System.Windows.Automation.AutomationElement]
     $nameCond = New-Object System.Windows.Automation.PropertyCondition($ae::NameProperty, $Name)
-    foreach ($p in Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+    # Prefer a real button: apps can also have a link or label with the same name
+    # (Muni Golf's "Play" nav tab vs. its "Play" button).
+    $buttonCond = New-Object System.Windows.Automation.AndCondition($nameCond,
+        (New-Object System.Windows.Automation.PropertyCondition($ae::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
+    $descendants = [System.Windows.Automation.TreeScope]::Descendants
+    foreach ($p in Get-SessionProcess -Name $ProcessName -ErrorAction SilentlyContinue) {
         $pidCond = New-Object System.Windows.Automation.PropertyCondition($ae::ProcessIdProperty, $p.Id)
         foreach ($win in $ae::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
-            $button = $win.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $nameCond)
+            $button = $win.FindFirst($descendants, $buttonCond)
+            # Custom-drawn controls (GSPconnect's "Open Visual Data") aren't buttons.
+            if (-not $button) { $button = $win.FindFirst($descendants, $nameCond) }
             if ($button -and $button.Current.IsEnabled) { return $button }
         }
     }
@@ -306,7 +321,7 @@ function Stop-ProcessTree([int]$Id) {
 function Test-WindowClass([string]$ProcessName, [string]$ClassName) {
     $ae = [System.Windows.Automation.AutomationElement]
     $classCond = New-Object System.Windows.Automation.PropertyCondition($ae::ClassNameProperty, $ClassName)
-    foreach ($p in Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+    foreach ($p in Get-SessionProcess -Name $ProcessName -ErrorAction SilentlyContinue) {
         $pidCond = New-Object System.Windows.Automation.PropertyCondition($ae::ProcessIdProperty, $p.Id)
         $both = New-Object System.Windows.Automation.AndCondition($pidCond, $classCond)
         if ($ae::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $both)) { return $true }
@@ -405,7 +420,7 @@ function Invoke-Step($Step) {
 
     switch ($Step.type) {
         'kill' {
-            $procs = @(foreach ($name in @($Step.names)) { Get-Process -Name $name -ErrorAction SilentlyContinue })
+            $procs = @(foreach ($name in @($Step.names)) { Get-SessionProcess -Name $name -ErrorAction SilentlyContinue })
             if ($procs.Count -eq 0) { return 'skipped' }
             if (Get-Opt $Step 'graceful' $false) {
                 foreach ($p in $procs) { try { [void]$p.CloseMainWindow() } catch { } }
@@ -416,7 +431,7 @@ function Invoke-Step($Step) {
             $names = @($Step.names)
             $script:remaining = @()
             $sweep = {
-                $script:remaining = @(foreach ($name in $names) { Get-Process -Name $name -ErrorAction SilentlyContinue })
+                $script:remaining = @(foreach ($name in $names) { Get-SessionProcess -Name $name -ErrorAction SilentlyContinue })
                 if ($script:remaining.Count -eq 0) { return $true }
                 foreach ($p in $script:remaining) { Stop-ProcessTree $p.Id }
                 $false
@@ -438,7 +453,7 @@ function Invoke-Step($Step) {
         }
         'killCommandLine' {
             Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-                Where-Object { $_.CommandLine -and $_.CommandLine -like $Step.pattern } |
+                Where-Object { $_.SessionId -eq $script:sessionId -and $_.CommandLine -and $_.CommandLine -like $Step.pattern } |
                 ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
             return 'done'
         }
@@ -446,7 +461,7 @@ function Invoke-Step($Step) {
             $path = Expand-Path $Step.path
             if (-not (Test-Path $path)) { throw "File not found: $path" }
             $exeName = [IO.Path]::GetFileNameWithoutExtension($path)
-            if ((Get-Opt $Step 'skipIfRunning' $false) -and (Get-Process -Name $exeName -ErrorAction SilentlyContinue)) {
+            if ((Get-Opt $Step 'skipIfRunning' $false) -and (Get-SessionProcess -Name $exeName -ErrorAction SilentlyContinue)) {
                 return 'skipped'
             }
             $params = @{
@@ -476,7 +491,7 @@ function Invoke-Step($Step) {
             return 'done'
         }
         'waitProcess' {
-            if (-not (Wait-Until { Get-Process -Name $Step.name -ErrorAction SilentlyContinue } $timeout)) {
+            if (-not (Wait-Until { Get-SessionProcess -Name $Step.name -ErrorAction SilentlyContinue } $timeout)) {
                 throw "$($Step.name) didn't start within $timeout s"
             }
             return 'done'
@@ -508,10 +523,10 @@ function Invoke-Step($Step) {
             $onlyIf = Get-Opt $Step 'ifCommandLine'
             if ($onlyIf) {
                 # e.g. only press "Play!" when GSPro was started with its screen selector.
-                if (-not (Wait-Until { Get-Process -Name $Step.process -ErrorAction SilentlyContinue } $timeout)) {
+                if (-not (Wait-Until { Get-SessionProcess -Name $Step.process -ErrorAction SilentlyContinue } $timeout)) {
                     throw "$($Step.process) didn't start within $timeout s"
                 }
-                $cmd = Get-CimInstance Win32_Process -Filter "Name = '$($Step.process).exe'" -ErrorAction SilentlyContinue |
+                $cmd = Get-CimInstance Win32_Process -Filter "Name = '$($Step.process).exe' AND SessionId = $($script:sessionId)" -ErrorAction SilentlyContinue |
                     Select-Object -ExpandProperty CommandLine -First 1
                 if ($cmd -notlike $onlyIf) { return 'skipped' }
             }
@@ -532,7 +547,7 @@ function Invoke-Step($Step) {
                 $script:alreadyUp = $false
                 $left = [Math]::Max(1, ($deadline - (Get-Date)).TotalSeconds)
                 $found = Wait-Until {
-                    if ($doneIf -and (Get-Process -Name $doneIf -ErrorAction SilentlyContinue)) { $script:alreadyUp = $true; return $true }
+                    if ($doneIf -and (Get-SessionProcess -Name $doneIf -ErrorAction SilentlyContinue)) { $script:alreadyUp = $true; return $true }
                     if ($doneIfClass -and (Test-WindowClass $Step.process $doneIfClass)) { $script:alreadyUp = $true; return $true }
                     if ($doneIfPort -and (Test-Port $doneIfPort)) { $script:alreadyUp = $true; return $true }
                     if (-not $script:firstDone) {

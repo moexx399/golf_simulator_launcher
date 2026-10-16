@@ -25,6 +25,7 @@ The sample `launcher.example.json` is a working setup for:
 |---|---|---|
 | **GSPro** | OBS → GSPro launcher → opens GSPconnect's *Visual Data* (Square launch monitor connector) → brings GSPro to the front | **Driving Range (R)** — clicks *Launch GSPro*, *Practice*, *GSPro Practice* |
 | **Square Golf** | OBS → Square launcher → *Update* if available, otherwise *Play* → *Sign in* → *Skip* device search | **Driving Range (D)** — clicks *Driving Ranges*, then *Play* |
+| **Muni Golf** | Muni Golf Launcher → *Update* if available, otherwise *Play* → waits for the game → brings it to the front | **Driving Range (M)** — clicks *Practice*, *Facilities*, *Muni Driving Range* |
 | **PurePlay** | Placeholder (disabled) | — |
 
 More recipes — one per simulator, plus [square_impact](https://github.com/moexx399/square_impact) impact replays for the Square Omni — are in the [`examples`](examples/) folder. Each is a complete config you can try with `-Config examples\<name>.json`.

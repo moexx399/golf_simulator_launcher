@@ -6,6 +6,7 @@ Each file here is a complete, working config for one simulator (or add-on). Use 
 |---|---|---|
 | [`gspro.json`](gspro.json) | Boots GSPro; opens GSPconnect's *Visual Data* for Square launch monitors; **Driving Range** shortcut clicks *Launch GSPro* → *Practice* → *GSPro Practice* | Tested |
 | [`square-golf.json`](square-golf.json) | Boots Square Golf; presses *UPDATE* if offered, otherwise *PLAY*; *Sign in*; skips the device search; **Driving Range** shortcut clicks *Driving Ranges* → *Play* | Tested (app 2.0.5) |
+| [`muni-golf.json`](muni-golf.json) | Boots Muni Golf; presses *Update* if offered, otherwise *Play*; waits for the game and brings it to the front; **Driving Range** shortcut clicks *Practice* → *Facilities* → *Muni Driving Range* | Tested (launcher 2026.10.6) |
 | [`pureplay.json`](pureplay.json) | Starts PurePlay and OBS — a starting point; fill in the path and screens | **Not tested** |
 | [`square-impact.json`](square-impact.json) | Adds [square_impact](https://github.com/moexx399/square_impact) high-speed impact replays (an OBS overlay for the Square Omni) to GSPro and Square Golf | Tested (square_impact 0.8.0) |
 
