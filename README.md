@@ -132,6 +132,7 @@ Every step has a `type`, and optionally:
 | `delay` | Waits | `seconds` |
 | `deleteFiles` | Deletes files matching a wildcard path | `path` |
 | `focus` | Brings a program's window to the front | `process`, `settle` (seconds to wait first) |
+| `obsSource` | Points OBS at the simulator being started by editing the scene collection before OBS opens — e.g. retarget one shared game-capture source to each simulator's window, and pick the starting scene. Must come before OBS starts; the original collection is backed up once as `<file>.before-launcher` | `collection` (scene collection name), `sources` (`{ "Source name": { "setting": value } }`), `scene`, `folder` (default `%APPDATA%\obs-studio\basic\scenes`) |
 | `clickButton` | Presses a button found through Windows UI Automation — works for most normal desktop apps (WinForms, WPF, Qt, Electron) | see below |
 | `clickText` | Finds text on a program's window with OCR and clicks it — for games and custom-drawn UIs | see below |
 

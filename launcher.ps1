@@ -504,6 +504,51 @@ function Invoke-Step($Step) {
             Write-Log "    removed $($files.Count) file(s)"
             return 'done'
         }
+        'obsSource' {
+            # Points OBS sources at this simulator (e.g. the game capture's window)
+            # by editing the scene collection before OBS starts. OBS saves the
+            # collection when it closes, so it must not be running.
+            if (Get-SessionProcess -Name obs64) { throw 'OBS is running - put this step before OBS starts' }
+            $folder = Expand-Path (Get-Opt $Step 'folder' '%APPDATA%\obs-studio\basic\scenes')
+            $utf8 = New-Object System.Text.UTF8Encoding($false)
+            $file = $null; $doc = $null
+            foreach ($f in Get-ChildItem $folder -Filter *.json -ErrorAction SilentlyContinue) {
+                try { $d = [IO.File]::ReadAllText($f.FullName, $utf8) | ConvertFrom-Json } catch { continue }
+                if ($d.name -eq $Step.collection) { $file = $f.FullName; $doc = $d; break }
+            }
+            if (-not $file) { throw "No OBS scene collection named '$($Step.collection)' in $folder" }
+
+            $changed = @()
+            $wanted = Get-Opt $Step 'sources'
+            foreach ($prop in @($(if ($wanted) { $wanted.PSObject.Properties }))) {
+                $source = @($doc.sources | Where-Object { $_.name -eq $prop.Name }) | Select-Object -First 1
+                if (-not $source) { throw "OBS collection '$($Step.collection)' has no source named '$($prop.Name)'" }
+                if (-not $source.settings) { $source | Add-Member settings ([pscustomobject]@{}) -Force }
+                foreach ($setting in $prop.Value.PSObject.Properties) {
+                    if ("$($source.settings.($setting.Name))" -ne "$($setting.Value)") {
+                        $source.settings | Add-Member $setting.Name $setting.Value -Force
+                        $changed += "$($prop.Name).$($setting.Name)"
+                    }
+                }
+            }
+            $scene = Get-Opt $Step 'scene'
+            if ($scene) {
+                if (-not ($doc.sources | Where-Object { $_.id -eq 'scene' -and $_.name -eq $scene })) {
+                    throw "OBS collection '$($Step.collection)' has no scene named '$scene'"
+                }
+                foreach ($key in 'current_scene', 'current_program_scene') {
+                    if ($doc.$key -ne $scene) { $doc | Add-Member $key $scene -Force; $changed += $key }
+                }
+            }
+            if ($changed.Count -eq 0) { return 'skipped' }
+
+            # Keep the collection as it was before the launcher first touched it.
+            $backup = "$file.before-launcher"
+            if (-not (Test-Path $backup)) { Copy-Item $file $backup }
+            [IO.File]::WriteAllText($file, ($doc | ConvertTo-Json -Depth 100), $utf8)
+            Write-Log "    OBS: set $($changed -join ', ')"
+            return 'done'
+        }
         'delay' {
             Wait-Seconds (Get-Opt $Step 'seconds' 1)
             return 'done'

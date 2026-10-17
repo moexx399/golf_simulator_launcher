@@ -36,6 +36,30 @@ Your `launcher.json` can hold any number of simulators. To add one from a recipe
 
 To add **square_impact** to a simulator you already have, copy the `squareImpact` step set from [`square-impact.json`](square-impact.json), add `{ "type": "include", "set": "squareImpact" }` to the simulator's steps (and its actions' steps) after OBS starts, and add `"square_impact"` to both close lists.
 
+## Switch OBS capture with the simulator
+
+If your OBS scenes use one game-capture source for whichever simulator is running, add an `obsSource` step **before OBS starts** in each simulator, pointing that source at the simulator's window. A common pattern is one small step set per simulator that wraps the shared `obs` set:
+
+```json
+"obsForSquare": [
+    {
+        "type": "obsSource", "label": "Pointing OBS at Square Golf", "collection": "My Scenes",
+        "sources": { "Game": { "window": "Square Golf:UnityWndClass:Square Golf.exe", "priority": 2 } }
+    },
+    { "type": "include", "set": "obs" }
+]
+```
+
+Then use `{ "type": "include", "set": "obsForSquare" }` in place of `obs` in that simulator's steps. The `window` value is `title:class:exe` as OBS stores it; `"priority": 2` makes OBS match by program, so title changes don't matter. Add `"scene": "Name"` to also choose the scene OBS opens on.
+
+Windows for the recipes here:
+
+| Simulator | `window` | Capture type |
+|---|---|---|
+| GSPro | `GSPro:UnityWndClass:GSPro.exe` | Game Capture |
+| Square Golf | `Square Golf:UnityWndClass:Square Golf.exe` | Game Capture |
+| Muni Golf | `Muni Golf:UnrealWindow:MuniGolf-Win64-Shipping.exe` | Game Capture (DirectX 12) |
+
 ## square_impact notes
 
 - Download `square_impact.exe` from its [releases](https://github.com/moexx399/square_impact/releases) and set the path in both `squareImpact` steps (the recipe expects `%USERPROFILE%\square_impact\square_impact.exe`).
