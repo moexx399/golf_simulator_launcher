@@ -1,0 +1,3 @@
+kind: Dependencies
+body: Update psutil requirement from >=5.9 to >=7.2.2
+time: 2026-11-03T04:12:37.250340734Z
