@@ -1,0 +1,379 @@
+{
+    "title": "Golf Simulator",
+    "subtitle": "Choose a simulator to start",
+    "icon": "",
+    "fullscreen": true,
+    "whenReady": "minimize",
+    "autoBootSeconds": 0,
+    "defaultSim": "gspro",
+    "beforeEachSim": [
+        {
+            "type": "kill",
+            "label": "Closing leftover sim apps",
+            "graceful": true,
+            "timeout": 15,
+            "names": [
+                "GSPro",
+                "GSPLauncher",
+                "GSPconnect",
+                "obs",
+                "Square Golf Launcher",
+                "Square Golf",
+                "MuniGolfLauncher",
+                "MuniGolf",
+                "MuniGolf-Win64-Shipping",
+                "LaunchMonitorConnect",
+                "PurePlay"
+            ]
+        }
+    ],
+    "stepSets": {
+        "obs": [
+            {
+                "type": "deleteFiles",
+                "label": "Clearing OBS crash flag",
+                "path": "~/.config/obs-studio/.sentinel/run_*"
+            },
+            {
+                "type": "start",
+                "label": "Starting OBS",
+                "path": "obs",
+                "args": "--disable-shutdown-check",
+                "optional": true
+            },
+            {
+                "type": "waitPort",
+                "label": "Waiting for OBS",
+                "port": 4455,
+                "timeout": 30,
+                "optional": true
+            }
+        ],
+        "gsproVisualData": [
+            {
+                "type": "clickButton",
+                "label": "Opening Square visual data",
+                "process": "GSPconnect",
+                "text": "Open Visual Data",
+                "timeout": 180,
+                "optional": true
+            },
+            {
+                "type": "focus",
+                "label": "Bringing GSPro to the front",
+                "process": "GSPro",
+                "settle": 1.5,
+                "timeout": 30,
+                "optional": true
+            }
+        ],
+        "muniBoot": [
+            {
+                "type": "start",
+                "label": "Starting Muni Golf",
+                "path": "wine",
+                "args": "\"$HOME/.wine/drive_c/users/$USER/AppData/Local/Programs/muni-golf-launcher/MuniGolfLauncher.exe\""
+            },
+            {
+                "type": "clickButton",
+                "label": "Updating if needed, then pressing Play",
+                "process": "MuniGolfLauncher",
+                "clickFirst": "Update",
+                "text": "Play",
+                "settle": 4,
+                "doneIfProcess": "MuniGolf-Win64-Shipping",
+                "timeout": 900
+            },
+            {
+                "type": "waitProcess",
+                "label": "Waiting for the game",
+                "name": "MuniGolf-Win64-Shipping",
+                "timeout": 180
+            },
+            {
+                "type": "focus",
+                "label": "Bringing Muni Golf to the front",
+                "process": "MuniGolf-Win64-Shipping",
+                "settle": 3,
+                "timeout": 60,
+                "optional": true
+            }
+        ],
+        "muniRange": [
+            {
+                "_note": "The game is an Unreal app, so its menu is read with OCR.",
+                "type": "clickText",
+                "label": "Opening Practice",
+                "process": "MuniGolf-Win64-Shipping",
+                "text": "Practice",
+                "timeout": 180,
+                "settle": 1.5
+            },
+            {
+                "_note": "No confirmGone on this or the next step: the following screens also show the same words (PRACTICE FACILITIES heading, the range's minimap title).",
+                "type": "clickText",
+                "label": "Opening Facilities",
+                "process": "MuniGolf-Win64-Shipping",
+                "text": "Facilities",
+                "timeout": 30,
+                "settle": 1
+            },
+            {
+                "_note": "The built-in range. Swap in another installed facility's name to practise somewhere else.",
+                "type": "clickText",
+                "label": "Loading the driving range",
+                "process": "MuniGolf-Win64-Shipping",
+                "text": "Muni Driving Range",
+                "timeout": 60,
+                "settle": 1,
+                "parkMouse": true
+            }
+        ],
+        "squareBoot": [
+            {
+                "type": "include",
+                "set": "obs"
+            },
+            {
+                "type": "start",
+                "label": "Starting Square",
+                "path": "wine",
+                "args": "\"$HOME/.wine/drive_c/users/$USER/AppData/Local/Programs/Square Golf Launcher/Square Golf Launcher.exe\""
+            },
+            {
+                "type": "clickButton",
+                "label": "Updating if needed, then pressing Play",
+                "process": "Square Golf Launcher",
+                "clickFirst": "UPDATE",
+                "text": "PLAY",
+                "timeout": 900
+            },
+            {
+                "type": "clickText",
+                "label": "Signing in",
+                "process": "Square Golf",
+                "text": "Sign in",
+                "timeout": 180,
+                "settle": 1.5,
+                "confirmGone": true
+            },
+            {
+                "type": "clickText",
+                "label": "Skipping device search",
+                "process": "Square Golf",
+                "text": "Skip",
+                "timeout": 60,
+                "settle": 1,
+                "confirmGone": true,
+                "parkMouse": true
+            }
+        ]
+    },
+    "sims": [
+        {
+            "id": "gspro",
+            "name": "GSPro",
+            "subtitle": "Courses, practice range and online play",
+            "accent": "#3FA66B",
+            "image": "gspro.png",
+            "check": "$HOME/.wine/drive_c/GSProV1/GSPLauncher.exe",
+            "steps": [
+                {
+                    "type": "include",
+                    "set": "obs"
+                },
+                {
+                    "type": "start",
+                    "label": "Starting GSPro",
+                    "path": "wine",
+                    "args": "\"$HOME/.wine/drive_c/GSProV1/GSPLauncher.exe\""
+                },
+                {
+                    "type": "include",
+                    "set": "gsproVisualData"
+                }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "R",
+                    "steps": [
+                        {
+                            "type": "include",
+                            "set": "obs"
+                        },
+                        {
+                            "type": "start",
+                            "label": "Starting GSPro launcher",
+                            "path": "wine",
+                            "args": "\"$HOME/.wine/drive_c/GSProV1/GSPLauncher.exe\""
+                        },
+                        {
+                            "type": "clickButton",
+                            "label": "Checking for updates, then launching GSPro",
+                            "process": "GSPLauncher",
+                            "text": "Launch GSPro",
+                            "doneIfProcess": "GSPro",
+                            "timeout": 600
+                        },
+                        {
+                            "type": "clickButton",
+                            "label": "Confirming screen settings",
+                            "process": "GSPro",
+                            "text": "Play!",
+                            "ifCommandLine": "*-show-screen-selector*",
+                            "timeout": 60,
+                            "optional": true
+                        },
+                        {
+                            "type": "clickText",
+                            "label": "Opening Practice",
+                            "process": "GSPro",
+                            "text": "Practice",
+                            "timeout": 180
+                        },
+                        {
+                            "type": "clickText",
+                            "label": "Loading the driving range",
+                            "process": "GSPro",
+                            "text": "GSPro Practice",
+                            "timeout": 30,
+                            "parkMouse": true
+                        },
+                        {
+                            "type": "include",
+                            "set": "gsproVisualData"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "square",
+            "name": "Square",
+            "subtitle": "Square Golf",
+            "accent": "#E8833A",
+            "image": "square-logo.png",
+            "check": "$HOME/.wine/drive_c/users/$USER/AppData/Local/Programs/Square Golf Launcher/Square Golf Launcher.exe",
+            "steps": [
+                {
+                    "type": "include",
+                    "set": "squareBoot"
+                }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "D",
+                    "steps": [
+                        {
+                            "type": "include",
+                            "set": "squareBoot"
+                        },
+                        {
+                            "type": "clickText",
+                            "label": "Opening Driving Ranges",
+                            "process": "Square Golf",
+                            "text": "Driving Ranges",
+                            "timeout": 60,
+                            "settle": 1.5
+                        },
+                        {
+                            "type": "clickText",
+                            "label": "Loading the driving range",
+                            "process": "Square Golf",
+                            "text": "Play",
+                            "timeout": 30,
+                            "settle": 1,
+                            "confirmGone": true,
+                            "parkMouse": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "muni",
+            "name": "Muni Golf",
+            "subtitle": "Real courses built from map data",
+            "accent": "#2F9E6B",
+            "image": "muni-logo.png",
+            "check": "$HOME/.wine/drive_c/users/$USER/AppData/Local/Programs/muni-golf-launcher/MuniGolfLauncher.exe",
+            "steps": [
+                {
+                    "type": "include",
+                    "set": "obs"
+                },
+                {
+                    "type": "include",
+                    "set": "muniBoot"
+                }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "M",
+                    "steps": [
+                        {
+                            "type": "include",
+                            "set": "obs"
+                        },
+                        {
+                            "type": "include",
+                            "set": "muniBoot"
+                        },
+                        {
+                            "type": "include",
+                            "set": "muniRange"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "pureplay",
+            "name": "PurePlay",
+            "subtitle": "PurePlay Golf",
+            "accent": "#4A8FE7",
+            "image": "pureplay-logo.png",
+            "enabled": false,
+            "status": "Coming soon",
+            "check": "$HOME/.wine/drive_c/CHANGE_ME/PurePlay.exe",
+            "steps": [
+                {
+                    "type": "include",
+                    "set": "obs"
+                },
+                {
+                    "type": "start",
+                    "label": "Starting PurePlay",
+                    "path": "wine",
+                    "args": "\"$HOME/.wine/drive_c/CHANGE_ME/PurePlay.exe\""
+                }
+            ]
+        }
+    ],
+    "closeAll": [
+        {
+            "type": "kill",
+            "graceful": true,
+            "timeout": 15,
+            "names": [
+                "GSPro",
+                "GSPLauncher",
+                "GSPconnect",
+                "obs",
+                "Square Golf Launcher",
+                "Square Golf",
+                "MuniGolfLauncher",
+                "MuniGolf",
+                "MuniGolf-Win64-Shipping",
+                "LaunchMonitorConnect",
+                "PurePlay"
+            ]
+        }
+    ]
+}

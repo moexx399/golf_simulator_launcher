@@ -3,3 +3,6 @@ launcher.json
 
 launcher.log
 *.bak
+
+.venv/
+__pycache__/

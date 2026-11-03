@@ -1,0 +1,12 @@
+# Keeps the workflows' actions and the packages bundled in the build up to date.
+# dependabot-changie.yml adds the changelog fragment to each of these PRs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly

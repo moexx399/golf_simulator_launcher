@@ -1,6 +1,6 @@
 # Recipes
 
-Each file here is a complete, working config for one simulator (or add-on). Use them to try a setup on its own, or copy the parts you need into your `launcher.json`.
+These recipes are for the Windows version; on Linux and macOS start from `launcher.linux.example.json` or `launcher.macos.example.json` (the steps work the same way, see the main README for the differences). Each file here is a complete, working config for one simulator (or add-on). Use them to try a setup on its own, or copy the parts you need into your `launcher.json`.
 
 | Recipe | What it does | Status |
 |---|---|---|

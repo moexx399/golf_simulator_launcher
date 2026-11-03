@@ -1,0 +1,60 @@
+# Lint + tests on every push and pull request, plus a changelog check on PRs.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install ruff
+      - run: ruff check --output-format=github .
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.13"]
+        include:   # the oldest Python the README promises
+          - { os: ubuntu-latest, python: "3.10" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+
+  changelog:
+    # Every PR needs a changie fragment (`changie new`), unless labelled skip-changelog.
+    # Dependabot's get theirs from dependabot-changie.yml.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.user.login != 'dependabot[bot]'
+      && !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require a changelog fragment
+        run: |
+          if git diff --name-only --diff-filter=A "origin/${{ github.base_ref }}...HEAD" \
+               | grep -q '^\.changes/unreleased/.*\.yaml$'; then
+            echo "changelog fragment found"
+          else
+            echo "::error::Add a changelog entry with 'changie new' (or label the PR skip-changelog for docs/CI-only changes)."
+            exit 1
+          fi

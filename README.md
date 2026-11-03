@@ -1,10 +1,12 @@
 # Golf Simulator Launcher
 
-A full-screen, touch-friendly menu for Windows golf simulator PCs. Pick a simulator — or jump straight to its driving range — and the launcher closes whatever was running, starts the supporting apps (OBS, launch-monitor bridges, stream deck servers…), and clicks through the simulator's launch screens for you.
+A full-screen, touch-friendly menu for golf simulator PCs on Linux, macOS and Windows. Pick a simulator — or jump straight to its driving range — and the launcher closes whatever was running, starts the supporting apps (OBS, launch-monitor bridges, stream deck servers…), and clicks through the simulator's launch screens for you.
 
 Everything is driven by a single JSON file, so adding a new simulator or changing the boot sequence doesn't require touching any code.
 
 ![The launcher menu with GSPro, Square Golf and PurePlay tiles](docs/menu.webp)
+
+> **Linux and macOS:** use the Python launcher described under [Linux and macOS](#linux-and-macos). The rest of this README describes the Windows version (`launcher.ps1`); the config format and step types are shared, with the differences listed in that section.
 
 ## Features
 
@@ -30,14 +32,74 @@ The sample `launcher.example.json` is a working setup for:
 
 More recipes — one per simulator, plus [square_impact](https://github.com/moexx399/square_impact) impact replays for the Square Omni — are in the [`examples`](examples/) folder. Each is a complete config you can try with `-Config examples\<name>.json`.
 
-## Requirements
+## Linux and macOS
+
+The simulators in the sample configs are Windows programs, so on these systems they have to run through Wine or Proton (or a similar compatibility layer). Whether a given simulator and its launch monitor work that way is up to them; the launcher only starts and clicks through them. The samples assume the default Wine prefix (`~/.wine`) — change the `check`, `path` and `args` values to match your install.
+
+### Install with Homebrew
+
+```sh
+brew install moexx399/tap/golf_simulator_launcher
+golf_simulator_launcher --windowed --dry-run     # try it; nothing starts
+```
+
+This is a self-contained build, and Homebrew brings the tools it needs. Your `launcher.json` and `launcher.log` go in `~/.local/share/golf_simulator_launcher` (Linux) or `~/Library/Application Support/golf_simulator_launcher` (macOS), and relative paths in the config resolve from the installed build, so use full paths for your own files. It doesn't start at login by itself; add `golf_simulator_launcher` to your desktop's startup apps. The build isn't notarized; macOS may ask you to approve it the first time.
+
+Prebuilt archives for each platform are also on the [releases page](https://github.com/moexx399/golf_simulator_launcher/releases).
+
+### Set up from source
+
+Needs Python 3.10 or newer.
+
+```sh
+python3 install.py --deps-only     # installs the Python packages into .venv and lists any tools still needed
+.venv/bin/python launcher.py --windowed --dry-run     # try it; nothing starts
+python3 install.py                 # start at login, add a Desktop shortcut (--uninstall removes them)
+```
+
+The tools it asks for:
+
+| | Install |
+|---|---|
+| Ubuntu / Debian | `sudo apt install xdotool x11-utils imagemagick tesseract-ocr tesseract-ocr-eng libxcb-cursor0` (and `python3-venv` for the system Python) |
+| macOS | `brew install cliclick tesseract` |
+
+On first run `launcher.json` is created from `launcher.linux.example.json` or `launcher.macos.example.json`. Options are spelled `--config`, `--select`, `--windowed` and `--dry-run`.
+
+On macOS, allow the launcher (Terminal, or the Python in `.venv`) under **System Settings → Privacy & Security**, in both *Accessibility* and *Screen Recording*.
+
+### What differs from Windows
+
+| Windows version | Linux and macOS |
+|---|---|
+| `clickButton` finds buttons through UI Automation | Wine apps don't expose their controls, so it reads the caption with OCR like `clickText`. The app has to be visible, and a **greyed-out button can't be told apart from an active one**: if `PLAY` is on screen but disabled during an update, the click does nothing and the next step waits. Give that next step a generous `timeout` |
+| Windows OCR | Tesseract |
+| `doneIfWindowClass` compares Windows classes | Compares the X11 `WM_CLASS` on Linux; never matches on macOS. Classes such as `UnityWndClass` don't exist under Wine |
+| `kill` offers an admin prompt for elevated apps | Only your own account's processes are seen; anything running as root or another user is left alone |
+| `minimized` and `conhost` on `start` | Ignored |
+| `path` is a file | Can also be a command on `PATH` (`"wine"`) or, on macOS, an `.app` bundle. `args` is split like a shell command line and expands `$VARIABLES`, but no shell runs |
+| Paths use `%VAR%` | Paths use `~` and `$VAR` |
+
+Process names match the program's name with or without `.exe`, ignoring case, including Windows programs under Wine. OBS is `obs` here, and `obsSource` looks in `~/.config/obs-studio/basic/scenes` (Linux) or `~/Library/Application Support/obs-studio/basic/scenes` (macOS). Its `sources` settings are passed to OBS as written, and capture sources have different settings on each system.
+
+### Linux: X11 and Wayland
+
+Clicking and window control go through X11, which also covers Wayland sessions as long as the target is an X11 window. Wine and Proton games normally are (through XWayland), and the launcher's own window runs that way too. **Apps running as native Wayland windows can't be found, focused or clicked**, so `focus`, `clickButton` and `clickText` fail for them. `start`, `kill`, the `wait` steps and `obsSource` work regardless. Run such an app with `QT_QPA_PLATFORM=xcb` or `GDK_BACKEND=x11` if you need to click in it.
+
+### Run the tests
+
+```sh
+.venv/bin/python -m unittest discover tests
+```
+
+## Requirements (Windows)
 
 - Windows 10 or 11
 - Windows PowerShell 5.1 (built in — PowerShell 7 is not required)
 - An English (or other OCR-supported) language pack for the screen-reading steps — installed by default on English Windows
 - A 4K display is not required, but the sample recipes were tuned on one
 
-## Quick start
+## Quick start (Windows)
 
 1. **Download** this repository (or `git clone` it) somewhere permanent, e.g. `C:\GolfLauncher`.
 2. **Create your config** — copy `launcher.example.json` to `launcher.json` (the launcher also does this for you on first run) and adjust it to your setup: app paths, your OBS scene collection (`--collection "Name"` in the OBS `args`), and any extra apps to start or close (see [Configuration](#configuration)). Paths can use environment variables like `%LOCALAPPDATA%`, and relative paths are relative to the launcher folder. `launcher.json` is git-ignored, so pulling updates never overwrites your setup.
@@ -191,20 +253,43 @@ If nothing useful shows up (typical for Unity and Unreal games), use `clickText`
 
 Contributions are welcome — especially recipes for more simulators and launch monitors.
 
+- **Changelog**: add an entry with [`changie new`](https://changie.dev) and commit it with your change. CI checks for one on pull requests; docs- or CI-only PRs can use the `skip-changelog` label. Dependabot PRs get theirs automatically.
+
 - **New simulator recipes**: add a `sims` entry (and any `stepSets`) to `launcher.example.json` — not your own `launcher.json`, which isn't tracked — using `%LOCALAPPDATA%`/`%ProgramFiles%` style paths rather than your own user folder. Mention the simulator version you tested in your pull request.
-- **New step types**: add a case to `Invoke-Step` in `launcher.ps1`, keep it working under `-DryRun`, log anything useful with `Write-Log`, and document it in the table above.
-- **Keep it dependency-free**: the launcher must run on a fresh Windows install with Windows PowerShell 5.1 — no modules, no PowerShell 7-only syntax.
+- **New step types**: add a `step_<type>` method to `Runner` in `steps.py` and a case to `Invoke-Step` in `launcher.ps1`, keep it working under `-DryRun`, log anything useful with `Write-Log`, and document it in the table above.
+- **Keep it dependency-free on Windows**: `launcher.ps1` must run on a fresh Windows install with Windows PowerShell 5.1 — no modules, no PowerShell 7-only syntax.
 - **Test** with `-Windowed -DryRun` for layout and flow, then with a real boot.
 - **Bugs**: open an issue with the relevant part of `launcher.log`, your Windows version, screen resolution, and a screenshot of the screen it got stuck on.
+
+## Releasing
+
+The version lives in `launcher.py` (`VERSION`), and changie updates it.
+
+```sh
+changie batch auto      # collects .changes/unreleased into .changes/vX.Y.Z.md, bumps VERSION
+changie merge           # regenerates CHANGELOG.md
+git add -A && git commit -m "Release vX.Y.Z"
+git tag vX.Y.Z && git push && git push --tags
+```
+
+Pushing the tag runs `.github/workflows/build-exe.yml`: it checks the tag matches `VERSION`, builds for macOS and Linux, publishes a GitHub Release with `.changes/vX.Y.Z.md` as the notes, installs the new formula with Homebrew on each platform, and only then pushes it to [the tap](https://github.com/moexx399/homebrew-tap). That last step needs a `HOMEBREW_TAP_TOKEN` secret with write access to the tap.
 
 ## Project layout
 
 ```
-launcher.ps1            the app (UI, step runner, automation helpers)
-launcher.example.json   sample config with the GSPro / Square / PurePlay recipes
+launcher.py             Linux/macOS: the window
+steps.py                Linux/macOS: reads the config, runs the steps
+desktop.py              Linux/macOS: processes, windows, mouse, OCR
+install.py              Linux/macOS: Python packages, login item, Desktop shortcut
+launcher.linux.example.json, launcher.macos.example.json    sample configs
+tests/                  unit tests for the Python version
+packaging/              smoke test for builds, Homebrew formula generator
+.changes/, CHANGELOG.md changelog fragments and released notes
+launcher.ps1            Windows: the app (UI, step runner, automation helpers)
+install.ps1             Windows: adds/removes the Startup and Desktop shortcuts
+launcher.example.json   Windows: sample config with the GSPro / Square / PurePlay recipes
 launcher.json           your own config (git-ignored; created from the example on first run)
-examples/               one complete recipe per simulator / add-on
-install.ps1             adds/removes the Startup and Desktop shortcuts
+examples/               Windows: one complete recipe per simulator / add-on
 *.png                   tile logos
 docs/                   README images
 launcher.log            created at runtime (git-ignored)
