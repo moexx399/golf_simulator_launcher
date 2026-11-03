@@ -31,7 +31,7 @@ jobs:
           if git diff --name-only --diff-filter=A "origin/${{ github.base_ref }}...HEAD" -- .changes/unreleased | grep -q '\.yaml$'; then
             echo "found=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         if: steps.existing.outputs.found != 'true'
         with:
           go-version: stable
