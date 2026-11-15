@@ -347,6 +347,16 @@ class Runner:
         self._click(button, text)
         return "done"
 
+    def step_waitText(self, step):
+        # Waits for text on screen, e.g. a game's menu, so a following step can
+        # check briefly for something that only sometimes appears.
+        process, text = step["process"], step["text"]
+        timeout = step.get("timeout", 60)
+        self.hide_launcher()
+        if not wait_until(lambda: bool(self._locate(process, text)), timeout):
+            raise StepError(f"'{text}' didn't appear within {timeout} s")
+        return "done"
+
     def step_clickText(self, step):
         process, text = step["process"], step["text"]
         timeout = step.get("timeout", 60)
@@ -364,18 +374,25 @@ class Runner:
         # Menus slide/fade in; look again once they settle so the click lands on the button.
         time.sleep(step.get("settle", 0.6))
         hit = self._locate(process, text) or hit
-        # confirmGone: the screen may show the button before it accepts clicks, so
-        # keep clicking until the text goes away (only for text the next screen lacks).
-        tries = 6 if step.get("confirmGone") else 1
+        # The screen may show a button before it accepts clicks (or a game may spend
+        # the first click on taking focus), so keep clicking until the click shows:
+        #   confirmGone - the text goes away (only for text the next screen lacks);
+        #   confirmText - this other text appears (e.g. the next screen's button).
+        confirm_text = step.get("confirmText")
+        tries = 6 if confirm_text or step.get("confirmGone") else 1
         for attempt in range(1, tries + 1):
             self._click(hit, text, f" (try {attempt})")
             if attempt == tries:
                 break
             time.sleep(2)
+            if confirm_text and self._locate(process, confirm_text):
+                break
             still = self._locate(process, text)
             if not still:
                 break
             hit = still
+        if confirm_text and not wait_until(lambda: bool(self._locate(process, confirm_text)), 10):
+            raise StepError(f"Clicked '{text}' but '{confirm_text}' never appeared")
         if step.get("parkMouse"):
             window = hit[0]
             desktop.move_mouse(window.x + window.w - 2, window.y + window.h - 2)

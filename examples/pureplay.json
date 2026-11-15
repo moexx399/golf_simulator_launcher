@@ -1,5 +1,5 @@
 {
-    "_about": "PurePlay starter recipe - NOT TESTED YET. It starts PurePlay and OBS but doesn't click through any screens. Set the two paths to your PurePlay install (and the process name in the kill lists to its .exe name without .exe), remove 'enabled': false, then add clickButton / clickText steps for its menus. Contributions welcome.",
+    "_about": "Pureplay recipe. Starts the Pureplay launcher (it activates this PC's licence and installs updates), presses its PLAY button when it shows one, otherwise starts the game directly, and adds a Driving Range shortcut (Practice > Choose a range > Mountain Range > Start Range Session). The launcher installs per Windows account under %LOCALAPPDATA%; the game installs to Program Files. Tested with launcher 0.12.1194 / Unreal Engine 5.7 game build 20261112 (early access).",
 
     "title": "Golf Simulator",
     "subtitle": "Choose a simulator to start",
@@ -7,8 +7,9 @@
 
     "beforeEachSim": [
         {
+            "_note": "Pureplay runs as the launcher (Pureplay Launcher, started by a small Pureplay.exe), plus the game, whose starter and actual game are both called Pureplaygolf.",
             "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
-            "names": ["PurePlay", "obs64"]
+            "names": ["Pureplay Launcher", "Pureplaygolf", "Pureplay", "obs64"]
         }
     ],
 
@@ -29,6 +30,55 @@
                 "process": "obs64", "text": "Run in Normal Mode", "doneIfPort": 4455, "timeout": 30, "optional": true
             },
             { "type": "waitPort", "label": "Waiting for OBS", "port": 4455, "timeout": 30, "optional": true }
+        ],
+        "pureplayBoot": [
+            {
+                "_note": "Pureplay.exe checks for launcher updates, then opens the launcher, which activates the licence. Without an active licence the game opens but ranges and courses refuse to load.",
+                "type": "start", "label": "Starting the Pureplay launcher (licence and updates)",
+                "path": "%LOCALAPPDATA%\\com.pureplaygolf.launcher\\Pureplay.exe", "optional": true
+            },
+            {
+                "_note": "The launcher is an Electron app, so its button is pressed through UI Automation. It only offers PLAY once you're signed in to the launcher with a licensed account; until then this is skipped after 20 s and the next step starts the game directly.",
+                "type": "clickButton", "label": "Pressing Play in the launcher",
+                "process": "Pureplay Launcher", "text": "PLAY", "doneIfProcess": "Pureplaygolf", "timeout": 20, "optional": true
+            },
+            {
+                "type": "start", "label": "Starting Pureplay",
+                "path": "%ProgramFiles%\\Pureplay\\Pureplaygolf.exe", "skipIfRunning": true
+            },
+            {
+                "type": "focus", "label": "Bringing Pureplay to the front",
+                "process": "Pureplaygolf", "settle": 3, "timeout": 120, "optional": true
+            }
+        ],
+        "pureplayRange": [
+            {
+                "_note": "The game is Unreal Engine, so its menu is read with OCR. Wait for the menu first, so the next step only needs a quick look for the sign-in panel.",
+                "type": "waitText", "label": "Waiting for the menu", "process": "Pureplaygolf", "text": "Practice", "timeout": 180
+            },
+            {
+                "_note": "With nobody in the party, Pureplay opens a 'Sign in here' panel (scan the QR code with your phone, or add a guest). This closes it if it's there; players can still join from the party button. Remove this step if you'd rather sign in on the panel each time.",
+                "type": "clickText", "label": "Closing the sign-in panel",
+                "process": "Pureplaygolf", "text": "Close", "timeout": 4, "settle": 1, "confirmGone": true, "optional": true
+            },
+            {
+                "_note": "Pureplay can ignore the first click after it gets focus, and PRACTICE stays in the sidebar, so confirmText keeps clicking until the practice page shows.",
+                "type": "clickText", "label": "Opening Practice",
+                "process": "Pureplaygolf", "text": "Practice", "confirmText": "Range Practice", "timeout": 180, "settle": 1.5
+            },
+            {
+                "type": "clickText", "label": "Opening the ranges",
+                "process": "Pureplaygolf", "text": "Choose a range", "confirmText": "Mountain Range", "timeout": 30, "settle": 1
+            },
+            {
+                "_note": "Swap in 'Floating Island Driving Range' (in both places below) for the fantasy range.",
+                "type": "clickText", "label": "Picking Mountain Range",
+                "process": "Pureplaygolf", "text": "Mountain Range", "confirmText": "Start Range Session", "timeout": 30, "settle": 1
+            },
+            {
+                "type": "clickText", "label": "Loading the driving range",
+                "process": "Pureplaygolf", "text": "Start Range Session", "timeout": 30, "settle": 1, "confirmGone": true, "parkMouse": true
+            }
         ]
     },
 
@@ -36,19 +86,24 @@
         {
             "id": "pureplay",
             "name": "PurePlay",
-            "subtitle": "PurePlay Golf",
+            "subtitle": "Pureplay Golf",
             "accent": "#BEFF00",
             "image": "pureplay-logo.png",
-            "enabled": false,
-            "status": "Set the PurePlay path in examples\\pureplay.json",
-            "check": "C:\\CHANGE_ME\\PurePlay.exe",
+            "check": "%ProgramFiles%\\Pureplay\\Pureplaygolf.exe",
             "steps": [
                 { "type": "include", "set": "obs" },
-                { "type": "start", "label": "Starting PurePlay", "path": "C:\\CHANGE_ME\\PurePlay.exe" },
+                { "type": "include", "set": "pureplayBoot" }
+            ],
+            "actions": [
                 {
-                    "_note": "Example of a follow-up click once you know PurePlay's screens; optional so it can't stop the boot while you're working it out.",
-                    "type": "focus", "label": "Bringing PurePlay to the front",
-                    "process": "PurePlay", "settle": 2, "timeout": 60, "optional": true
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "P",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "include", "set": "pureplayBoot" },
+                        { "type": "include", "set": "pureplayRange" }
+                    ]
                 }
             ]
         }
@@ -57,7 +112,7 @@
     "closeAll": [
         {
             "type": "kill", "graceful": true, "timeout": 15,
-            "names": ["PurePlay", "obs64"]
+            "names": ["Pureplay Launcher", "Pureplaygolf", "Pureplay", "obs64"]
         }
     ]
 }

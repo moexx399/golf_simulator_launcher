@@ -10,7 +10,7 @@
     "beforeEachSim": [
         {
             "type": "kill", "label": "Closing leftover sim apps", "graceful": true, "timeout": 15,
-            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "PurePlay"]
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "Pureplay Launcher", "Pureplaygolf", "PurePlay"]
         }
     ],
 
@@ -86,6 +86,47 @@
             {
                 "type": "clickText", "label": "Skipping device search",
                 "process": "Square Golf", "text": "Skip", "timeout": 60, "settle": 1, "confirmGone": true, "parkMouse": true
+            }
+        ],
+        "pureplayBoot": [
+            {
+                "type": "start", "label": "Starting the Pureplay launcher (licence and updates)",
+                "path": "%LOCALAPPDATA%\\com.pureplaygolf.launcher\\Pureplay.exe", "optional": true
+            },
+            {
+                "type": "clickButton", "label": "Pressing Play in the launcher",
+                "process": "Pureplay Launcher", "text": "PLAY", "doneIfProcess": "Pureplaygolf", "timeout": 20, "optional": true
+            },
+            {
+                "type": "start", "label": "Starting Pureplay",
+                "path": "%ProgramFiles%\\Pureplay\\Pureplaygolf.exe", "skipIfRunning": true
+            },
+            {
+                "type": "focus", "label": "Bringing Pureplay to the front",
+                "process": "Pureplaygolf", "settle": 3, "timeout": 120, "optional": true
+            }
+        ],
+        "pureplayRange": [
+            { "type": "waitText", "label": "Waiting for the menu", "process": "Pureplaygolf", "text": "Practice", "timeout": 180 },
+            {
+                "type": "clickText", "label": "Closing the sign-in panel",
+                "process": "Pureplaygolf", "text": "Close", "timeout": 4, "settle": 1, "confirmGone": true, "optional": true
+            },
+            {
+                "type": "clickText", "label": "Opening Practice",
+                "process": "Pureplaygolf", "text": "Practice", "confirmText": "Range Practice", "timeout": 180, "settle": 1.5
+            },
+            {
+                "type": "clickText", "label": "Opening the ranges",
+                "process": "Pureplaygolf", "text": "Choose a range", "confirmText": "Mountain Range", "timeout": 30, "settle": 1
+            },
+            {
+                "type": "clickText", "label": "Picking Mountain Range",
+                "process": "Pureplaygolf", "text": "Mountain Range", "confirmText": "Start Range Session", "timeout": 30, "settle": 1
+            },
+            {
+                "type": "clickText", "label": "Loading the driving range",
+                "process": "Pureplaygolf", "text": "Start Range Session", "timeout": 30, "settle": 1, "confirmGone": true, "parkMouse": true
             }
         ]
     },
@@ -189,15 +230,25 @@
         {
             "id": "pureplay",
             "name": "PurePlay",
-            "subtitle": "PurePlay Golf",
-            "accent": "#4A8FE7",
+            "subtitle": "Pureplay Golf",
+            "accent": "#BEFF00",
             "image": "pureplay-logo.png",
-            "enabled": false,
-            "status": "Coming soon",
-            "check": "C:\\CHANGE_ME\\PurePlay.exe",
+            "check": "%ProgramFiles%\\Pureplay\\Pureplaygolf.exe",
             "steps": [
                 { "type": "include", "set": "obs" },
-                { "type": "start", "label": "Starting PurePlay", "path": "C:\\CHANGE_ME\\PurePlay.exe" }
+                { "type": "include", "set": "pureplayBoot" }
+            ],
+            "actions": [
+                {
+                    "id": "range",
+                    "label": "Driving Range",
+                    "key": "P",
+                    "steps": [
+                        { "type": "include", "set": "obs" },
+                        { "type": "include", "set": "pureplayBoot" },
+                        { "type": "include", "set": "pureplayRange" }
+                    ]
+                }
             ]
         }
     ],
@@ -205,7 +256,7 @@
     "closeAll": [
         {
             "type": "kill", "graceful": true, "timeout": 15,
-            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "PurePlay"]
+            "names": ["GSPro", "GSPLauncher", "GSPconnect", "obs64", "Square Golf Launcher", "Square Golf", "MuniGolfLauncher", "MuniGolf", "MuniGolf-Win64-Shipping", "LaunchMonitorConnect", "Pureplay Launcher", "Pureplaygolf", "PurePlay"]
         }
     ]
 }

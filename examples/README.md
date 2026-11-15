@@ -7,7 +7,7 @@ These recipes are for the Windows version; on Linux and macOS start from `launch
 | [`gspro.json`](gspro.json) | Boots GSPro; opens GSPconnect's *Visual Data* for Square launch monitors; **Driving Range** shortcut clicks *Launch GSPro* → *Practice* → *GSPro Practice* | Tested |
 | [`square-golf.json`](square-golf.json) | Boots Square Golf; presses *UPDATE* if offered, otherwise *PLAY*; *Sign in*; skips the device search; **Driving Range** shortcut clicks *Driving Ranges* → *Play* | Tested (app 2.0.5) |
 | [`muni-golf.json`](muni-golf.json) | Boots Muni Golf; presses *Update* if offered, otherwise *Play*; waits for the game and brings it to the front; **Driving Range** shortcut clicks *Practice* → *Facilities* → *Muni Driving Range* | Tested (launcher 2026.10.6) |
-| [`pureplay.json`](pureplay.json) | Starts PurePlay and OBS — a starting point; fill in the path and screens | **Not tested** |
+| [`pureplay.json`](pureplay.json) | Boots Pureplay through its launcher (licence and updates), or starts the game directly if the launcher shows no *PLAY*; **Driving Range** shortcut closes the sign-in panel if shown, then clicks *Practice* → *Choose a range* → *Mountain Range* → *Start Range Session* | Tested (launcher 0.12.1194, early-access build) up to *Start Range Session* |
 | [`square-impact.json`](square-impact.json) | Adds [square_impact](https://github.com/moexx399/square_impact) high-speed impact replays (an OBS overlay for the Square Omni) to GSPro and Square Golf | Tested (square_impact 0.8.0) |
 
 Every recipe also starts OBS and makes sure it opens in normal mode. `"_about"` and `"_note"` fields are explanations only; the launcher ignores them.
@@ -59,6 +59,7 @@ Windows for the recipes here:
 | GSPro | `GSPro:UnityWndClass:GSPro.exe` | Game Capture |
 | Square Golf | `Square Golf:UnityWndClass:Square Golf.exe` | Game Capture |
 | Muni Golf | `Muni Golf:UnrealWindow:MuniGolf-Win64-Shipping.exe` | Game Capture (DirectX 12) |
+| Pureplay | `Pureplaygolf:UnrealWindow:Pureplaygolf.exe` | Game Capture |
 
 ## square_impact notes
 

@@ -17,7 +17,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 FROZEN = getattr(sys, "frozen", False)  # running from the packaged build
 # The launcher's own files (example configs, logos). Relative paths resolve from here.
 BASE_DIR = Path(sys._MEIPASS) if FROZEN else Path(__file__).resolve().parent

@@ -617,6 +617,20 @@ function Invoke-Step($Step) {
             Invoke-UiaButton $script:button $Step.process $Step.text
             return 'done'
         }
+        'waitText' {
+            # Waits for text on screen, e.g. a game's menu, so a following step can
+            # check briefly for something that only sometimes appears.
+            Initialize-Ocr
+            Hide-Launcher
+            $found = Wait-Until {
+                $h = Get-AppWindow $Step.process
+                if ($h -eq [IntPtr]::Zero) { return $false }
+                if ([GolfNative]::GetForegroundWindow() -ne $h) { [void][GolfNative]::SetForegroundWindow($h) }
+                [bool](Find-TextOnWindow $h $Step.text)
+            } $timeout
+            if (-not $found) { throw "'$($Step.text)' didn't appear within $timeout s" }
+            return 'done'
+        }
         'clickText' {
             Initialize-Ocr
             Hide-Launcher
@@ -635,9 +649,12 @@ function Invoke-Step($Step) {
             Wait-Seconds (Get-Opt $Step 'settle' 0.6)
             $again = Find-TextOnWindow $script:hwnd $Step.text
             if ($again) { $script:hit = $again }
-            # confirmGone: the screen may show the button before it accepts clicks, so
-            # keep clicking until the text goes away (only for text the next screen lacks).
-            $tries = $(if (Get-Opt $Step 'confirmGone' $false) { 6 } else { 1 })
+            # The screen may show a button before it accepts clicks (or a game may spend
+            # the first click on taking focus), so keep clicking until the click shows:
+            #   confirmGone - the text goes away (only for text the next screen lacks);
+            #   confirmText - this other text appears (e.g. the next screen's button).
+            $confirmText = Get-Opt $Step 'confirmText'
+            $tries = $(if ($confirmText -or (Get-Opt $Step 'confirmGone' $false)) { 6 } else { 1 })
             for ($try = 1; $try -le $tries; $try++) {
                 [void][GolfNative]::Focus($script:hwnd)
                 Wait-Seconds 0.2
@@ -645,9 +662,13 @@ function Invoke-Step($Step) {
                 Write-Log "    clicked '$($Step.text)' at $($script:hit.X),$($script:hit.Y) (try $try)"
                 if ($try -eq $tries) { break }
                 Wait-Seconds 2
+                if ($confirmText -and (Find-TextOnWindow $script:hwnd $confirmText)) { break }
                 $still = Find-TextOnWindow $script:hwnd $Step.text
                 if (-not $still) { break }
                 $script:hit = $still
+            }
+            if ($confirmText -and -not (Wait-Until { [bool](Find-TextOnWindow $script:hwnd $confirmText) } 10)) {
+                throw "Clicked '$($Step.text)' but '$confirmText' never appeared"
             }
             if (Get-Opt $Step 'parkMouse' $false) {
                 [void][GolfNative]::SetCursorPos($script:hit.Right - 2, $script:hit.Bottom - 2)

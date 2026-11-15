@@ -28,7 +28,7 @@ The sample `launcher.example.json` is a working setup for:
 | **GSPro** | OBS → GSPro launcher → opens GSPconnect's *Visual Data* (Square launch monitor connector) → brings GSPro to the front | **Driving Range (R)** — clicks *Launch GSPro*, *Practice*, *GSPro Practice* |
 | **Square Golf** | OBS → Square launcher → *Update* if available, otherwise *Play* → *Sign in* → *Skip* device search | **Driving Range (D)** — clicks *Driving Ranges*, then *Play* |
 | **Muni Golf** | Muni Golf Launcher → *Update* if available, otherwise *Play* → waits for the game → brings it to the front | **Driving Range (M)** — clicks *Practice*, *Facilities*, *Muni Driving Range* |
-| **PurePlay** | Placeholder (disabled) | — |
+| **PurePlay** | Pureplay launcher (licence and updates) → its *PLAY* button if shown, otherwise starts the game directly → brings it to the front | **Driving Range (P)** — closes the sign-in panel if shown, clicks *Practice*, *Choose a range*, *Mountain Range*, *Start Range Session* |
 
 More recipes — one per simulator, plus [square_impact](https://github.com/moexx399/square_impact) impact replays for the Square Omni — are in the [`examples`](examples/) folder. Each is a complete config you can try with `-Config examples\<name>.json`.
 
@@ -197,6 +197,7 @@ Every step has a `type`, and optionally:
 | `obsSource` | Points OBS at the simulator being started by editing the scene collection before OBS opens — e.g. retarget one shared game-capture source to each simulator's window, and pick the starting scene. Must come before OBS starts; the original collection is backed up once as `<file>.before-launcher` | `collection` (scene collection name), `sources` (`{ "Source name": { "setting": value } }`), `scene`, `folder` (default `%APPDATA%\obs-studio\basic\scenes`) |
 | `clickButton` | Presses a button found through Windows UI Automation — works for most normal desktop apps (WinForms, WPF, Qt, Electron) | see below |
 | `clickText` | Finds text on a program's window with OCR and clicks it — for games and custom-drawn UIs | see below |
+| `waitText` | Waits until text shows on a program's window (OCR) — e.g. wait for a game's menu, then give an optional `clickText` a short `timeout` for a panel that only sometimes appears | `process`, `text` |
 
 **`clickButton` options**
 
@@ -219,6 +220,7 @@ Every step has a `type`, and optionally:
 | `text` | Words to find. A line that is exactly this text (a button) wins over a sentence that contains it |
 | `settle` | Seconds to wait after the text first appears, so menus finish animating (default 0.6) |
 | `confirmGone` | Look again after clicking and click again (up to 6 times) while the text is still there. Only use it when the next screen doesn't show the same text |
+| `confirmText` | Keep clicking (up to 6 times) until this other text appears, e.g. the next screen's button; fails the step if it never does. Use it when the clicked text stays on screen (a sidebar item) or a game ignores the first click after taking focus |
 | `parkMouse` | Move the pointer to the window's corner afterwards |
 
 ### Finding button names
@@ -243,7 +245,7 @@ If nothing useful shows up (typical for Unity and Unreal games), use `clickText`
 
 - **Logs** — every boot is written to `launcher.log` next to the script, including where each click landed.
 - **A `clickText` step never finds its text** — the target window must be visible and in front; the launcher minimizes itself while it reads the screen. Check the spelling against what's actually shown, and that a supported OCR language is installed (`Get-WindowsCapability -Online -Name Language.OCR*`).
-- **A click lands but nothing happens** — some games show buttons before they accept input. Increase `settle` or add `confirmGone: true`.
+- **A click lands but nothing happens** — some games show buttons before they accept input. Increase `settle`, or add `confirmGone: true` or `confirmText` so the click is repeated until the screen changes.
 - **"…is running as administrator and couldn't be closed"** — something was started elevated. Accept the UAC prompt, or close it yourself. Avoid starting sim apps "as administrator".
 - **OBS asks about Safe Mode** — add the `deleteFiles` step for `%APPDATA%\obs-studio\.sentinel\run_*` before starting OBS (the sample config does), and the `Run in Normal Mode` fallback click.
 - **Wrong OBS scenes or no websocket** — OBS settings are per Windows account; make sure the account running the launcher has the scene collection and has *Tools → WebSocket Server Settings → Enable* turned on.
